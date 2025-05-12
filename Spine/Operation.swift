@@ -444,28 +444,37 @@ private class RelationshipMutateOperation: RelationshipOperation {
 	}
 
 	override func execute() {
-		let resourceCollection = resource.value(forField: relationship.name) as! LinkedResourceCollection
-		let httpMethod: String
-		let relatedResources: [Resource]
-		
-		switch mutation {
-		case .add:
-			httpMethod = "POST"
-			relatedResources = resourceCollection.addedResources
-		case .remove:
-			httpMethod = "DELETE"
-			relatedResources = resourceCollection.removedResources
-		}
-		
-		guard !relatedResources.isEmpty else {
-			result = .success(())
+		if let resourceCollection = resource.value(forField: relationship.name) as? LinkedResourceCollection {
+			// Use resourceCollection here
+			let httpMethod: String
+			let relatedResources: [Resource]
+
+			switch mutation {
+			case .add:
+				httpMethod = "POST"
+				relatedResources = resourceCollection.addedResources
+			case .remove:
+				httpMethod = "DELETE"
+				relatedResources = resourceCollection.removedResources
+			}
+
+			guard !relatedResources.isEmpty else {
+				result = .success(())
+				state = .finished
+				return
+			}
+
+			let url = router.urlForRelationship(relationship, ofResource: resource)
+			let payload = try! serializer.serializeLinkData(relatedResources)
+			Spine.logInfo(.spine, "Mutating relationship \(relationship) using URL: \(url)")
+			networkClient.request(method: httpMethod, url: url, payload: payload, callback: handleNetworkResponse)
+
+		} else {
+			// Trate o caso em que o tipo é incorreto
+			print("Erro: Tipo incorreto para o relacionamento \(relationship.name)")
+			result = .failure(.unknownError) // Ou outro erro apropriado
 			state = .finished
-			return
 		}
-		
-		let url = router.urlForRelationship(relationship, ofResource: resource)
-		let payload = try! serializer.serializeLinkData(relatedResources)
-		Spine.logInfo(.spine, "Mutating relationship \(relationship) using URL: \(url)")
-		networkClient.request(method: httpMethod, url: url, payload: payload, callback: handleNetworkResponse)
 	}
+
 }
