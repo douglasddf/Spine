@@ -1,11 +1,11 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.9
 import PackageDescription
 
 let package = Package(
     name: "Spine",
     platforms: [
-        .iOS(.v11),
-        .macOS(.v10_13)
+        .iOS(.v17),
+        .macOS(.v10_15)
     ],
     products: [
         .library(
